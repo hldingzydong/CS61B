@@ -16,7 +16,7 @@ public class KnapsackTest extends TestCase {
         int V = 20;
         int[] weights = new int[]{3,2,4,5,1,6};
         int[] values = new int[]{2,4,3,8,1,5};
-        // only pick 3rd
+        // only pick 2nd
         Assert.assertEquals(40, knapsack.CompletePack(V, weights, values));
     }
 
