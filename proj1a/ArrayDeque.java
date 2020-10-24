@@ -1,20 +1,20 @@
 public class ArrayDeque<T> {
     private T[] items;
-    private int front;
-    private int tail;
+    private int nextFirst;
+    private int nextLast;
     private int size;
 
     ArrayDeque() {
         this.items = (T[]) new Object[8];
-        this.front = 0;
-        this.tail = 0;
+        this.nextFirst = 0;
+        this.nextLast = 1;
         this.size = 0;
     }
 
     ArrayDeque(ArrayDeque<T> other) {
-        this.items = (T[]) new Object[8];
-        this.front = other.front;
-        this.tail = other.tail;
+        this.items = (T[]) new Object[other.items.length];
+        this.nextFirst = other.nextFirst;
+        this.nextLast = other.nextLast;
         this.size = other.size;
 
         System.arraycopy(other.items, 0, this.items, 0, other.items.length);
@@ -22,59 +22,79 @@ public class ArrayDeque<T> {
 
     private void resize(int capacity) {
         T[] a = (T[]) new Object[capacity];
-        System.arraycopy(this.items, 0, a, 0, this.items.length);
-        if(this.front > this.tail) {
-            int startIndex = (this.front + 1) % this.items.length;
-            while (startIndex > 0) {
-                a[startIndex + capacity - this.items.length] = a[startIndex];
-                a[startIndex] = null;
-                startIndex = (startIndex + 1) % this.items.length;
-            }
-            this.front = this.front + (capacity - this.items.length);
-        } else if(this.front == this.tail) {
-            this.tail = this.tail + this.items.length - 1;
+        int i = this.nextFirst + 1;
+        for(; i < this.nextFirst + this.items.length; i++) {
+            a[i] = this.items[i % this.items.length];
         }
+        this.nextLast = i;
         this.items = a;
+    }
 
+    private void shrink(int capacity) {
+        T[] a = (T[]) new Object[capacity];
+        int i = this.nextFirst + 1;
+        int j = 1;
+        if(this.nextLast > this.nextFirst) {
+            for(; i < this.nextLast + this.items.length; i++) {
+                a[j] = this.items[i % this.items.length];
+                j++;
+            }
+        } else {
+            for(; i < this.nextLast; i++) {
+                a[j] = this.items[i];
+                j++;
+            }
+        }
+
+        this.nextFirst = 0;
+        this.nextLast = j;
+        this.items = a;
     }
 
     public void addFirst(T item) {
-        if(this.size == this.items.length) {
+        if(this.nextFirst == this.nextLast) {
             resize(this.items.length * 2);
         }
-        this.items[this.front] = item;
-        this.front = (this.front + this.items.length - 1) % this.items.length;
+        this.items[this.nextFirst] = item;
+        this.nextFirst = (this.nextFirst + this.items.length - 1) % this.items.length;
         this.size += 1;
     }
 
     public T removeFirst() {
-        this.front = (this.front + 1) % this.items.length;
+        if(this.size == this.items.length * 0.25) {
+            shrink(this.items.length / 2);
+        }
+        this.nextFirst = (this.nextFirst + 1) % this.items.length;
         this.size -= 1;
-        T retVal = this.items[this.front];
+        T retVal = this.items[this.nextFirst];
         // for GC
-        this.items[this.front] = null;
+        this.items[this.nextFirst] = null;
         return retVal;
     }
 
     public void addLast(T item) {
-        if(this.size == this.items.length) {
+        if(this.nextFirst == this.nextLast) {
             resize(this.size * 2);
         }
-        this.tail = (this.tail + 1) % this.items.length;
-        this.items[this.tail] = item;
+        this.items[this.nextLast] = item;
+        this.nextLast = (this.nextLast + 1) % this.items.length;
         this.size += 1;
     }
 
     public T removeLast() {
-        T retVal = this.items[this.tail];
-        this.items[this.tail] = null;
-        this.tail = (this.tail + this.items.length - 1) % this.items.length;
+        if(this.size == this.items.length * 0.25) {
+            shrink(this.items.length / 2);
+        }
+        this.nextLast = (this.nextLast + this.items.length - 1) % this.items.length;
+        T retVal = this.items[this.nextLast];
+        // for GC
+        this.items[this.nextLast] = null;
         this.size -= 1;
         return retVal;
     }
 
     public T get(int index) {
-        return this.items[(this.front + 1 + index) % this.items.length];
+        return this.items[(this.nextFirst + 1 + index) % this.items.length];
     }
 
     public boolean isEmpty() {
@@ -86,16 +106,16 @@ public class ArrayDeque<T> {
     }
 
     public void printDeque() {
-        int startIndex = (this.front + 1) % this.items.length;
-        while (startIndex != this.tail) {
+        int startIndex = (this.nextFirst + 1) % this.items.length;
+        while (startIndex != this.nextLast) {
             System.out.print(this.items[startIndex] + " ");
             startIndex = (startIndex + 1) % this.items.length;
         }
-        System.out.print(this.items[startIndex] + " ");
         System.out.print("\n");
     }
 
     public static void main(String[] args) {
+        System.out.println("****** test basic operation ******");
         ArrayDeque<String> stringDeque = new ArrayDeque<>();
         stringDeque.addFirst("hello");
         stringDeque.addLast(",");
@@ -106,7 +126,7 @@ public class ArrayDeque<T> {
         stringDeque.addLast("test-last-node");
         stringDeque.printDeque();
 
-        System.out.println("get by iteration:");
+        System.out.println("****** test get by iteration ******");
         System.out.println("first node = " + stringDeque.get(0));
         System.out.println("last node = " + stringDeque.get(stringDeque.size() - 1));
 
@@ -114,15 +134,19 @@ public class ArrayDeque<T> {
         stringDeque.removeFirst();
         stringDeque.removeLast();
 
-        System.out.println("test deep copy:");
+        System.out.println("****** test deep copy ******");
         stringDeque.printDeque();
         stringDequeCopy.printDeque();
 
-        System.out.println("test resize");
+        System.out.println("****** test resize ******");
         ArrayDeque<Integer> resizeArrayDeque = new ArrayDeque<>();
         int N = 9;
         for(int i = 0; i < N; i++) {
             resizeArrayDeque.addLast(i);
+        }
+        resizeArrayDeque.printDeque();
+        for(int i = 0; i < N - 1; i++) {
+            resizeArrayDeque.removeLast();
         }
         resizeArrayDeque.printDeque();
     }
