@@ -4,27 +4,27 @@ import java.util.*;
 
 public class ArrayHeapMinPQ<T> implements ExtrinsicMinPQ<T>{
     private final List<Node> heap;
-    private final Map<T, Integer> items;
+    private final Map<T, Integer> itemToIndex;
 
     ArrayHeapMinPQ() {
         heap = new ArrayList<>();
         heap.add(new Node(null, -1)); // dummy root
 
-        items = new HashMap<>();
+        itemToIndex = new HashMap<>();
     }
 
     @Override
     public void add(T item, double priority) {
         if(!contains(item)) {
             heap.add(new Node(item, priority));
-            items.put(item, heap.size() - 1);
+            itemToIndex.put(item, heap.size() - 1);
             swim(heap.size() - 1);
         }
     }
 
     @Override
     public boolean contains(T item) {
-        return items.containsKey(item);
+        return itemToIndex.containsKey(item);
     }
 
     @Override
@@ -34,31 +34,27 @@ public class ArrayHeapMinPQ<T> implements ExtrinsicMinPQ<T>{
 
     @Override
     public T removeSmallest() {
+        T item = null;
         if(size() > 1) {
             Node smallest = heap.get(1);
-            T item = smallest.item;
+            item = smallest.item;
             swap(smallest, heap.get(size()));
 
             heap.remove(size());
-            items.remove(item);
+            itemToIndex.remove(item);
 
-            items.put(heap.get(1).item, 1);
+            itemToIndex.put(heap.get(1).item, 1);
             sink(1);
-            return item;
         } else if(size() == 1) {
-            T item = heap.remove(1).item;
-            items.remove(item);
-            return item;
-        } else {
-            return null;
+            item = heap.remove(1).item;
+            itemToIndex.remove(item);
         }
-
-
+        return item;
     }
 
     @Override
     public int size() {
-        return this.items.size();
+        return this.itemToIndex.size();
     }
 
     @Override
@@ -66,7 +62,7 @@ public class ArrayHeapMinPQ<T> implements ExtrinsicMinPQ<T>{
         if(!contains(item)) {
             throw new IllegalArgumentException(item + " doesn't exist");
         } else {
-            int index = items.get(item);
+            int index = itemToIndex.get(item);
             Node curr = heap.get(index);
             if(curr.priority > priority) {
                 curr.priority = priority;
@@ -79,17 +75,21 @@ public class ArrayHeapMinPQ<T> implements ExtrinsicMinPQ<T>{
     }
 
     private void swim(int index) {
-        Node curr = heap.get(index);
+        int currIndex = index;
+        Node curr = heap.get(currIndex);
         int parentIndex = parent(index);
         Node parent = heap.get(parentIndex);
-        while (parent != null && parent.priority > curr.priority) {
-            items.put(curr.item, parentIndex);
-            items.put(parent.item, index);
-            swap(parent, curr);
 
-            index = parentIndex;
+        while (parent != null && parent.priority > curr.priority) {
+            // update map
+            itemToIndex.put(curr.item, parentIndex);
+            itemToIndex.put(parent.item, currIndex);
+            // update node content
+            swap(parent, curr);
+            // update reference
+            currIndex = parentIndex;
             curr = parent;
-            parentIndex = parent(index);
+            parentIndex = parent(currIndex);
             parent = heap.get(parentIndex);
         }
     }
@@ -112,9 +112,12 @@ public class ArrayHeapMinPQ<T> implements ExtrinsicMinPQ<T>{
         if(childIndex > 0) {
             Node child = heap.get(childIndex);
             if(child.priority < curr.priority) {
-                items.put(curr.item, childIndex);
-                items.put(child.item, index);
+                // update map
+                itemToIndex.put(curr.item, childIndex);
+                itemToIndex.put(child.item, index);
+                // swap node content
                 swap(curr, child);
+                // recursion
                 sink(childIndex);
             }
         }
