@@ -53,9 +53,43 @@ public class KDTree implements PointSet {
         if(distance(node.p, goal) < distance(best.p, goal)) {
             best = node;
         }
-        best = nearest(node.left, goal, best);
-        best = nearest(node.right, goal, best);
+        KDTreeNode goodSide;
+        KDTreeNode badSide;
+        if(node.vertical == VERTICAL) {
+            if(goal.getX() <= node.p.getX()) {
+                goodSide = node.left;
+                badSide = node.right;
+            } else {
+                goodSide = node.right;
+                badSide = node.left;
+            }
+        } else {
+            if(goal.getY() <= node.p.getY()) {
+                goodSide = node.left;
+                badSide = node.right;
+            } else {
+                goodSide = node.right;
+                badSide = node.left;
+            }
+        }
+        best = nearest(goodSide, goal, best);
+        // 1) create a best point from badSide, just use one dimension
+        // 2) compare distance(bestBadPoint, goal) & distance(best, goal)
+        if(badSide != null) {
+            double bestBadSideDistance = findBestBadSideDistance(node, goal);
+            if(bestBadSideDistance <= distance(best.p, goal)) {
+                best = nearest(badSide, goal, best);
+            }
+        }
         return best;
+    }
+
+    private double findBestBadSideDistance(KDTreeNode node, Point goal) {
+        if(node.vertical == VERTICAL) {
+            return Math.pow(node.p.getX() - goal.getX(), 2);
+        } else {
+            return Math.pow(node.p.getY() - goal.getY(), 2);
+        }
     }
 
     private static class KDTreeNode {

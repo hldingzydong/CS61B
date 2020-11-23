@@ -17,9 +17,9 @@ import static org.junit.Assert.assertEquals;
 public class KDTreeTest {
     private static final int RANDOM_UPPER = 1000;
     private static final int RANDOM_BOTTOM = -1000;
-    private static final int RANDOM_POINT_NUMBER_SOURCE = 100;
+    private static final int RANDOM_POINT_NUMBER_SOURCE = 100000;
     private static final int RANDOM_POINT_NUMBER_TEST_CORRECT = 100;
-    private static final int RANDOM_POINT_NUMBER_TEST_EFFICIENT = 100;
+    private static final int RANDOM_POINT_NUMBER_TEST_EFFICIENT = 10000;
 
     @Test
     public void testKDTree() {
