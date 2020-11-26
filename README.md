@@ -6,7 +6,7 @@
 - lab7/clab7
 - lab8/clab8
 - lab9
-- lab11
+- lab11/clab11
 
 #### Homework
 - HW2
@@ -22,7 +22,6 @@
 #### Lab
 - clab6 - [leetcode#803. Bricks Falling When Hit](https://leetcode.com/problems/bricks-falling-when-hit/)
 - clab9 - [leetcode#886. Possible Bipartition](https://leetcode.com/problems/possible-bipartition/)
-- clab11
 
 
 #### Project
