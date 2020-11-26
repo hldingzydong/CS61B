@@ -16,6 +16,7 @@ public class BnBSolver {
         this.pairs = solveHelper(bears, beds);
     }
 
+    // Divide and conquer, thinking like QuickSort
     private List<Pair<Bear, Bed>> solveHelper(List<Bear> bears, List<Bed> beds) {
         if(bears.isEmpty()) {
             return new ArrayList<>();
