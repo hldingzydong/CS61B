@@ -1,5 +1,6 @@
 package bearmaps.proj2c.server.handler.impl;
 
+import bearmaps.proj2ab.DoubleMapPQ;
 import bearmaps.proj2c.AugmentedStreetMapGraph;
 import bearmaps.proj2c.server.handler.APIRouteHandler;
 import spark.Request;
@@ -17,8 +18,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static bearmaps.proj2c.utils.Constants.SEMANTIC_STREET_GRAPH;
-import static bearmaps.proj2c.utils.Constants.ROUTE_LIST;
+import static bearmaps.proj2c.utils.Constants.*;
 
 /**
  * Handles requests from the web browser for map images. These images
@@ -45,6 +45,7 @@ public class RasterAPIHandler extends APIRouteHandler<Map<String, Double>, Map<S
     private static final String[] REQUIRED_RASTER_RESULT_PARAMS = {"render_grid", "raster_ul_lon",
             "raster_ul_lat", "raster_lr_lon", "raster_lr_lat", "depth", "query_success"};
 
+    private static final String IMAGE_NAME_FORMAT = "d%d_x%d_y%d.png";
 
     @Override
     protected Map<String, Double> parseRequestParams(Request request) {
@@ -82,13 +83,70 @@ public class RasterAPIHandler extends APIRouteHandler<Map<String, Double>, Map<S
      * "query_success" : Boolean, whether the query was able to successfully complete; don't
      *                    forget to set this to true on success! <br>
      */
+    // 1. read parameters from request
+    // 2. calculate LonDPP from parameters
+    // 3. make sure depth according to step#2
+    // 4. calculate "raster_ul_lon", "raster_ul_lat" ...
+    // 5. decide if query success
+    // 6. according to step#4, find the image files
     @Override
     public Map<String, Object> processRequest(Map<String, Double> requestParams, Response response) {
         System.out.println("yo, wanna know the parameters given by the web browser? They are:");
-         System.out.println(requestParams);
+        System.out.println(requestParams);
         Map<String, Object> results = new HashMap<>();
-        System.out.println("Since you haven't implemented RasterAPIHandler.processRequest, nothing is displayed in "
-                + "your browser.");
+        // store parameter
+        Double ullat = requestParams.get(REQUIRED_RASTER_REQUEST_PARAMS[0]);
+        Double ullon = requestParams.get(REQUIRED_RASTER_REQUEST_PARAMS[1]);
+        Double lrlat = requestParams.get(REQUIRED_RASTER_REQUEST_PARAMS[2]);
+        Double lrlon = requestParams.get(REQUIRED_RASTER_REQUEST_PARAMS[3]);
+        // edge case: no interactive with ROOT scope
+        if(ullon >= ROOT_LRLON || lrlon <= ROOT_ULLON || ullat <= ROOT_LRLAT || lrlat >= ROOT_ULLAT) {
+            return queryFail();
+        }
+        Double width = requestParams.get(REQUIRED_RASTER_REQUEST_PARAMS[4]);
+        Double height = requestParams.get(REQUIRED_RASTER_REQUEST_PARAMS[5]);
+        // calculate LonDPP
+        double targetLonDPP = (lrlon - ullon)/width;
+        // find depth
+        int depth = 0;
+        for(depth = 0; depth <= 7; depth++) {
+            double depthLonDPP = (ROOT_LRLON - ROOT_ULLON)/(Math.pow(2, depth) * TILE_SIZE);
+            if(depthLonDPP <= targetLonDPP) {
+                break;
+            }
+        }
+        if(depth > 7) {
+            depth = 7;
+        }
+
+        if (depth == 0) {
+            results.put("render_grid", new String[][]{{"d0_x0_y0.png"}});
+            results.put("raster_ul_lon", ROOT_ULLON);
+            results.put("raster_ul_lat", ROOT_ULLAT);
+            results.put("raster_lr_lon", ROOT_LRLON);
+            results.put("raster_lr_lat", ROOT_LRLAT);
+        } else {
+            // according to depth, ullat, ullon, lrlat, lrlon, calculate the images
+            double ROOT_HEIGHT_UNIT = (ROOT_ULLAT - ROOT_LRLAT) / Math.pow(2, depth);
+            double ROOT_WIDTH_UNIT = (ROOT_LRLON - ROOT_ULLON) / Math.pow(2, depth);
+            int ullatIndex = (int)((ROOT_ULLAT - ullat) / ROOT_HEIGHT_UNIT);
+            int lrlatIndex = Math.min((int)((ROOT_ULLAT - lrlat)/ ROOT_HEIGHT_UNIT), (int) Math.pow(2, depth)-1);
+            int ullonIndex = (int)((ullon - ROOT_ULLON) / ROOT_WIDTH_UNIT);
+            int lrlonIndex = Math.min((int)((lrlon - ROOT_ULLON) / ROOT_WIDTH_UNIT), (int) Math.pow(2, depth)-1);
+            String[][] render_grid = new String[lrlatIndex - ullatIndex + 1][lrlonIndex - ullonIndex + 1];
+            for(int i = ullatIndex; i <= lrlatIndex; i++) {
+                for(int j = ullonIndex; j <= lrlonIndex; j++) {
+                    render_grid[i - ullatIndex][j - ullonIndex] = String.format(IMAGE_NAME_FORMAT, depth, j, i);
+                }
+            }
+            results.put("render_grid", render_grid);
+            results.put("raster_ul_lon", ullonIndex * ROOT_WIDTH_UNIT + ROOT_ULLON);
+            results.put("raster_ul_lat", ROOT_ULLAT - ullatIndex * ROOT_HEIGHT_UNIT );
+            results.put("raster_lr_lon", (lrlonIndex+1) * ROOT_WIDTH_UNIT + ROOT_ULLON);
+            results.put("raster_lr_lat", ROOT_ULLAT - (lrlatIndex+1) * ROOT_HEIGHT_UNIT);
+        }
+        results.put("depth", depth);
+        results.put("query_success", true);
         return results;
     }
 
