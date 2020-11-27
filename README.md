@@ -14,7 +14,7 @@
 
 #### Project
 - Proj1
-- Proj2ab
+- Proj2
 
 
 
@@ -25,5 +25,4 @@
 
 
 #### Project
-- Proj2c
 - Proj3
